@@ -1,0 +1,158 @@
+:root {
+  --bg: #050b05;
+  --fg: #39ff14;
+  --fg-dim: rgba(57, 255, 20, 0.75);
+  --fg-faint: rgba(57, 255, 20, 0.45);
+  --border: rgba(57, 255, 20, 0.25);
+  --danger: #ff3b3b;
+  --shadow: rgba(57, 255, 20, 0.15);
+  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: radial-gradient(1000px 600px at 50% 0%, rgba(57, 255, 20, 0.08), transparent 55%),
+    linear-gradient(180deg, rgba(57, 255, 20, 0.03), transparent 35%),
+    var(--bg);
+  color: var(--fg);
+  font-family: var(--mono);
+}
+
+.terminal {
+  width: min(1000px, calc(100% - 32px));
+  height: min(720px, calc(100% - 32px));
+  margin: 16px auto;
+  border: 1px solid var(--border);
+  box-shadow: 0 0 0 1px rgba(57, 255, 20, 0.08), 0 18px 60px rgba(0, 0, 0, 0.55);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(3px);
+}
+
+.terminal__header {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  gap: 6px;
+}
+
+.terminal__title {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.terminal__subtitle {
+  color: var(--fg-dim);
+  font-size: 0.95rem;
+}
+
+.hint {
+  color: var(--fg);
+}
+
+.terminal__output {
+  padding: 14px 16px;
+  overflow: auto;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.line {
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.45;
+}
+
+.line--muted {
+  color: var(--fg-dim);
+}
+
+.block {
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.35);
+}
+
+a {
+  color: var(--fg);
+  text-decoration: underline;
+}
+
+a:hover {
+  color: #b6ff9e;
+}
+
+img.terminal-image {
+  max-width: 100%;
+  border: 1px solid var(--border);
+  box-shadow: 0 0 0 1px rgba(57, 255, 20, 0.08);
+}
+
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+button.terminal-btn {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--fg);
+  font-family: var(--mono);
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+button.terminal-btn:hover {
+  border-color: rgba(57, 255, 20, 0.55);
+  box-shadow: 0 0 0 3px var(--shadow);
+}
+
+button.terminal-btn:active {
+  transform: translateY(1px);
+}
+
+.terminal__prompt {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.terminal__prompt__prefix {
+  color: var(--fg-dim);
+}
+
+.terminal__prompt__input {
+  width: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 1rem;
+}
+
+.caret {
+  display: inline-block;
+  width: 8px;
+  height: 1.05em;
+  background: var(--fg);
+  vertical-align: -0.15em;
+  margin-left: 2px;
+  opacity: 0.9;
+}

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KatOS Terminal</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js" integrity="sha512-aNMyYYxdIxIaot0Y1/PLuEu3eipGCmsEUbrsVLOgFGJolw6mOQzzlYx+wvX5R1yPLF/bJX6XoUu0Yp/5NQ0Y9A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  </head>
+  <body>
+    <main class="terminal" aria-label="Terminal">
+      <header class="terminal__header">
+        <div class="terminal__title">KatOS</div>
+        <div class="terminal__subtitle">Type <span class="hint">help</span> for a list of commands</div>
+      </header>
+
+      <section id="output" class="terminal__output" aria-live="polite"></section>
+
+      <form id="prompt" class="terminal__prompt" autocomplete="off">
+        <span class="terminal__prompt__prefix">$</span>
+        <input
+          id="commandInput"
+          class="terminal__prompt__input"
+          type="text"
+          spellcheck="false"
+          autocapitalize="none"
+          autocomplete="off"
+          aria-label="Command input"
+        />
+      </form>
+    </main>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
