@@ -1,0 +1,7 @@
+services:
+  katos:
+    build: .
+    ports:
+      - "6767:6767"
+    environment:
+      - PORT=6767
