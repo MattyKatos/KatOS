@@ -3,7 +3,7 @@ import fs from "fs/promises";
 import path from "path";
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 6767;
 
 const __dirname = path.resolve();
 
