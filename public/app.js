@@ -72,6 +72,12 @@ function renderToken(token) {
       outputEl.innerHTML = "";
       return;
     }
+    case "open": {
+      if (token.href) {
+        window.open(token.href, "_blank", "noreferrer");
+      }
+      return;
+    }
     case "text": {
       const line = createLine(token.text, { muted: Boolean(token.muted) });
       outputEl.appendChild(line);
@@ -150,14 +156,15 @@ function parseInput(raw) {
   const trimmed = raw.trim();
   if (!trimmed) return { name: "", args: [] };
 
-  const parts = trimmed.split(/\s+/g);
-  const name = parts[0].toLowerCase();
-  const args = parts.slice(1);
-  return { name, args };
+  const [first, ...restParts] = trimmed.split(/\s+/g);
+  const name = (first ?? "").toLowerCase();
+  const args = restParts;
+  const argsText = restParts.join(" ");
+  return { name, args, argsText };
 }
 
 async function execute(raw) {
-  const { name, args } = parseInput(raw);
+  const { name, args, argsText } = parseInput(raw);
 
   if (!name) return;
 
@@ -172,7 +179,7 @@ async function execute(raw) {
   }
 
   try {
-    const tokens = (await cmd.run({ args })) ?? [];
+    const tokens = (await cmd.run({ args, argsText })) ?? [];
     for (const token of tokens) {
       // Ensure typed tokens are awaited so output order is preserved
       const res = renderToken(token);
