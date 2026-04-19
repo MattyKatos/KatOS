@@ -14,7 +14,7 @@ export default {
 
     const title = document.createElement("div");
     title.className = "clicker__title";
-    title.textContent = "MattyClicker";
+    title.textContent = "Click make number go up.";
 
     const countEl = document.createElement("div");
     countEl.className = "clicker__count";
@@ -31,7 +31,7 @@ export default {
 
     const sub = document.createElement("div");
     sub.className = "clicker__sub";
-    sub.textContent = "Number go up.";
+    sub.textContent = "The world is arguably worse with more Mattys.";
 
     body.appendChild(countEl);
     body.appendChild(btn);
