@@ -4,9 +4,31 @@ const windowLayerEl = document.getElementById("windowLayer");
 const taskbarAppsEl = document.getElementById("taskbarApps");
 
 let commands = {};
+let apps = {};
+let appList = [];
 let zCounter = 10;
 let winCounter = 1;
 const windowsById = new Map();
+
+async function loadApps() {
+  const res = await fetch("/api/apps", { headers: { Accept: "application/json" } });
+  if (!res.ok) {
+    throw new Error(`Failed to load apps list: ${res.status}`);
+  }
+
+  const data = await res.json();
+  const modules = Array.isArray(data.modules) ? data.modules : [];
+
+  const loaded = await Promise.all(
+    modules.map(async (p) => {
+      const mod = await import(p);
+      return mod?.default;
+    })
+  );
+
+  appList = loaded.filter((a) => a && typeof a.id === "string" && typeof a.create === "function");
+  apps = Object.fromEntries(appList.map((a) => [a.id.toLowerCase(), a]));
+}
 
 async function loadCommands() {
   const res = await fetch("/api/commands", { headers: { Accept: "application/json" } });
@@ -176,321 +198,59 @@ function createWindow({ title, appId, contentEl, onFocus }) {
   return winId;
 }
 
-function createTerminalApp() {
-  const terminalEl = document.createElement("main");
-  terminalEl.className = "terminal";
-  terminalEl.setAttribute("aria-label", "Terminal");
-
-  const headerEl = document.createElement("header");
-  headerEl.className = "terminal__header";
-  const titleEl = document.createElement("div");
-  titleEl.className = "terminal__title";
-  titleEl.textContent = "KatOS";
-  const subtitleEl = document.createElement("div");
-  subtitleEl.className = "terminal__subtitle";
-  subtitleEl.innerHTML = 'Type <span class="hint">help</span> for a list of commands';
-  headerEl.appendChild(titleEl);
-  headerEl.appendChild(subtitleEl);
-
-  const outputEl = document.createElement("section");
-  outputEl.className = "terminal__output";
-  outputEl.setAttribute("aria-live", "polite");
-
-  const promptForm = document.createElement("form");
-  promptForm.className = "terminal__prompt";
-  promptForm.autocomplete = "off";
-
-  const prefix = document.createElement("span");
-  prefix.className = "terminal__prompt__prefix";
-  prefix.textContent = "$";
-
-  const inputEl = document.createElement("input");
-  inputEl.className = "terminal__prompt__input";
-  inputEl.type = "text";
-  inputEl.spellcheck = false;
-  inputEl.autocapitalize = "none";
-  inputEl.autocomplete = "off";
-  inputEl.setAttribute("aria-label", "Command input");
-
-  promptForm.appendChild(prefix);
-  promptForm.appendChild(inputEl);
-
-  terminalEl.appendChild(headerEl);
-  terminalEl.appendChild(outputEl);
-  terminalEl.appendChild(promptForm);
-
-  function scrollToBottom() {
-    outputEl.scrollTop = outputEl.scrollHeight;
-  }
-
-  function animateIn(element) {
-    if (typeof anime === "undefined") return;
-    anime({
-      targets: element,
-      opacity: [0, 1],
-      translateY: [6, 0],
-      duration: 260,
-      easing: "easeOutQuad",
-    });
-  }
-
-  function createLine(text, { muted = false } = {}) {
-    const line = document.createElement("div");
-    line.className = muted ? "line line--muted" : "line";
-    line.textContent = text;
-    return line;
-  }
-
-  async function typeLine(text, { muted = false, speed = 12 } = {}) {
-    const line = document.createElement("div");
-    line.className = muted ? "line line--muted" : "line";
-    outputEl.appendChild(line);
-    scrollToBottom();
-
-    const caret = document.createElement("span");
-    caret.className = "caret";
-    line.appendChild(caret);
-
-    for (let i = 0; i < text.length; i += 1) {
-      caret.insertAdjacentText("beforebegin", text[i]);
-      await new Promise((r) => setTimeout(r, speed));
-      scrollToBottom();
-    }
-
-    caret.remove();
-    animateIn(line);
-  }
-
-  function renderToken(token, execute) {
-    switch (token.type) {
-      case "clear": {
-        outputEl.innerHTML = "";
-        return;
-      }
-      case "open": {
-        if (token.href) {
-          window.open(token.href, "_blank", "noreferrer");
-        }
-        return;
-      }
-      case "text": {
-        const line = createLine(token.text, { muted: Boolean(token.muted) });
-        outputEl.appendChild(line);
-        animateIn(line);
-        return;
-      }
-      case "typed": {
-        return typeLine(token.text, { muted: Boolean(token.muted), speed: token.speed ?? 12 });
-      }
-      case "link": {
-        const line = document.createElement("div");
-        line.className = "line";
-        const a = document.createElement("a");
-        a.href = token.href;
-        a.target = "_blank";
-        a.rel = "noreferrer";
-        a.textContent = token.text ?? token.href;
-        line.appendChild(a);
-        outputEl.appendChild(line);
-        animateIn(line);
-        return;
-      }
-      case "image": {
-        const wrap = document.createElement("div");
-        wrap.className = "block";
-        const img = document.createElement("img");
-        img.className = "terminal-image";
-        img.alt = token.alt ?? "";
-        img.src = token.src;
-        wrap.appendChild(img);
-        outputEl.appendChild(wrap);
-        animateIn(wrap);
-        return;
-      }
-      case "buttons": {
-        const wrap = document.createElement("div");
-        wrap.className = "block";
-
-        if (token.label) {
-          wrap.appendChild(createLine(token.label, { muted: true }));
-        }
-
-        const row = document.createElement("div");
-        row.className = "btn-row";
-
-        for (const btn of token.buttons ?? []) {
-          const b = document.createElement("button");
-          b.type = "button";
-          b.className = "terminal-btn";
-          b.textContent = btn.text;
-          b.addEventListener("click", async () => {
-            if (btn.run) {
-              await execute(btn.run);
-            }
-            if (btn.href) {
-              window.open(btn.href, "_blank", "noreferrer");
-            }
-          });
-          row.appendChild(b);
-        }
-
-        wrap.appendChild(row);
-        outputEl.appendChild(wrap);
-        animateIn(wrap);
-        return;
-      }
-      default: {
-        const line = createLine(`[unknown token: ${token.type}]`, { muted: true });
-        outputEl.appendChild(line);
-        animateIn(line);
-      }
-    }
-  }
-
-  function parseInput(raw) {
-    const trimmed = raw.trim();
-    if (!trimmed) return { name: "", args: [] };
-
-    const [first, ...restParts] = trimmed.split(/\s+/g);
-    const name = (first ?? "").toLowerCase();
-    const args = restParts;
-    const argsText = restParts.join(" ");
-    return { name, args, argsText };
-  }
-
-  async function execute(raw) {
-    const { name, args, argsText } = parseInput(raw);
-
-    if (!name) return;
-
-    outputEl.appendChild(createLine(`$ ${raw}`, { muted: true }));
-    scrollToBottom();
-
-    const cmd = commands[name];
-    if (!cmd) {
-      await typeLine(`Command not found: ${name}`, { muted: false, speed: 10 });
-      await typeLine(`Type 'help' to see available commands.`, { muted: true, speed: 10 });
-      return;
-    }
-
-    try {
-      const tokens = (await cmd.run({ args, argsText })) ?? [];
-      for (const token of tokens) {
-        const res = renderToken(token, execute);
-        if (res instanceof Promise) await res;
-        scrollToBottom();
-      }
-    } catch (err) {
-      await typeLine(`Error: ${err?.message ?? String(err)}`, { muted: false, speed: 10 });
-    }
-  }
-
-  promptForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const raw = inputEl.value;
-    inputEl.value = "";
-    await execute(raw);
-  });
-
-  terminalEl.addEventListener("mousedown", () => {
-    inputEl.focus();
-  });
-
-  return {
-    el: terminalEl,
-    focus() {
-      inputEl.focus();
-    },
-    async boot() {
-      inputEl.focus();
-      await execute("about");
-    },
-  };
+function clearDesktopIcons() {
+  desktopIconsEl.innerHTML = "";
 }
 
-function createWebApp() {
-  const el = document.createElement("div");
-  el.className = "webapp";
+function addDesktopIcon(app) {
+  const btn = document.createElement("button");
+  btn.className = "desktop-icon";
+  btn.type = "button";
+  btn.setAttribute("data-app", app.id);
+  btn.setAttribute("aria-label", `Open ${app.title}`);
 
-  const header = document.createElement("div");
-  header.className = "webapp__header";
+  const glyph = document.createElement("span");
+  glyph.className = "desktop-icon__glyph";
+  glyph.textContent = app.iconGlyph ?? "?";
 
-  const title = document.createElement("div");
-  title.className = "webapp__title";
-  title.textContent = "Loading latest video...";
+  const label = document.createElement("span");
+  label.className = "desktop-icon__label";
+  label.textContent = app.title;
 
-  const openBtn = document.createElement("a");
-  openBtn.href = "https://www.youtube.com/@mattykatos";
-  openBtn.target = "_blank";
-  openBtn.rel = "noreferrer";
-  openBtn.textContent = "Open on YouTube";
+  btn.appendChild(glyph);
+  btn.appendChild(label);
+  desktopIconsEl.appendChild(btn);
+}
 
-  header.appendChild(title);
-  header.appendChild(openBtn);
+function renderDesktopIcons() {
+  clearDesktopIcons();
+  const sorted = [...appList].sort((a, b) => {
+    const ao = Number.isFinite(a.order) ? a.order : 9999;
+    const bo = Number.isFinite(b.order) ? b.order : 9999;
+    if (ao !== bo) return ao - bo;
+    const at = String(a.title ?? a.id ?? "");
+    const bt = String(b.title ?? b.id ?? "");
+    return at.localeCompare(bt);
+  });
 
-  const body = document.createElement("div");
-  body.className = "webapp__body";
-
-  const frame = document.createElement("iframe");
-  frame.className = "webapp__frame";
-  frame.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
-  frame.allowFullscreen = true;
-  body.appendChild(frame);
-
-  el.appendChild(header);
-  el.appendChild(body);
-
-  async function loadLatest() {
-    const res = await fetch("/api/latest-video?handle=mattykatos", { headers: { Accept: "application/json" } });
-    if (!res.ok) {
-      title.textContent = `Failed to load latest video (${res.status})`;
-      frame.remove();
-      return;
-    }
-    const data = await res.json();
-    const videoId = data?.videoId;
-    if (!videoId) {
-      title.textContent = "Failed to load latest video";
-      frame.remove();
-      return;
-    }
-    title.textContent = data?.title ? `Latest: ${data.title}` : "Latest video";
-    openBtn.href = `https://www.youtube.com/watch?v=${encodeURIComponent(videoId)}`;
-    frame.src = `https://www.youtube.com/embed/${encodeURIComponent(videoId)}`;
+  for (const app of sorted) {
+    addDesktopIcon(app);
   }
-
-  return {
-    el,
-    async boot() {
-      await loadLatest();
-    },
-  };
 }
 
 function openApp(appId) {
-  if (appId === "terminal") {
-    const terminal = createTerminalApp();
-    const winId = createWindow({
-      title: "Terminal",
-      appId,
-      contentEl: terminal.el,
-      onFocus: () => terminal.focus(),
-    });
-    terminal.boot();
-    return winId;
-  }
-  if (appId === "youtube") {
-    const web = createWebApp();
-    const winId = createWindow({
-      title: "YouTube",
-      appId,
-      contentEl: web.el,
-      onFocus: () => {},
-    });
-    web.boot();
-    return winId;
-  }
-  return null;
+  const app = apps[String(appId ?? "").toLowerCase()];
+  if (!app) return null;
+
+  const instance = app.create({ commands });
+  const winId = createWindow({
+    title: app.title,
+    appId: app.id,
+    contentEl: instance.el,
+    onFocus: () => instance.focus?.(),
+  });
+  instance.boot?.();
+  return winId;
 }
 
 desktopIconsEl.addEventListener("dblclick", (e) => {
@@ -513,10 +273,18 @@ desktopEl.addEventListener("mousedown", () => {
 
 (async () => {
   try {
+    await loadApps();
     await loadCommands();
   } catch (err) {
+    try {
+      await loadApps();
+    } catch {
+      return;
+    }
+    renderDesktopIcons();
     openApp("terminal");
     return;
   }
+  renderDesktopIcons();
   openApp("terminal");
 })();

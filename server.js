@@ -9,6 +9,22 @@ const __dirname = path.resolve();
 
 app.use(express.static(path.join(__dirname, "public")));
 
+app.get("/api/apps", async (req, res) => {
+  try {
+    const appsDir = path.join(__dirname, "public", "apps");
+    const entries = await fs.readdir(appsDir, { withFileTypes: true });
+
+    const modules = entries
+      .filter((e) => e.isFile() && e.name.endsWith(".js"))
+      .map((e) => `/apps/${e.name}`)
+      .filter((p) => !p.endsWith("/index.js"));
+
+    res.json({ modules });
+  } catch (err) {
+    res.status(500).json({ error: err?.message ?? String(err) });
+  }
+});
+
 app.get("/api/commands", async (req, res) => {
   try {
     const commandsDir = path.join(__dirname, "public", "commands");
