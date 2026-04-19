@@ -31,7 +31,7 @@ export default {
 
     const sub = document.createElement("div");
     sub.className = "clicker__sub";
-    sub.textContent = "The world is arguably worse with more Mattys.";
+    sub.textContent = "The world is arguably worse with more Matty.";
 
     body.appendChild(countEl);
     body.appendChild(btn);
